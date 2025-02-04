@@ -68,7 +68,23 @@ func (s *URLIPRange) fetch(api string) ([]netip.Prefix, error) {
 	scanner := bufio.NewScanner(resp.Body)
 	var prefixes []netip.Prefix
 	for scanner.Scan() {
-		prefix, err := caddyhttp.CIDRExpressionToPrefix(scanner.Text())
+		line := scanner.Text()
+
+		// Remove comments from the line
+		if idx := strings.Index(line, "#"); idx != -1 {
+			line = line[:idx]
+		}
+
+		// Trim spaces
+		line = strings.TrimSpace(line)
+
+		// Skip empty lines
+		if line == "" {
+			continue
+		}
+
+		// Convert to prefix
+		prefix, err := caddyhttp.CIDRExpressionToPrefix(line)
 		if err != nil {
 			return nil, err
 		}
@@ -79,7 +95,8 @@ func (s *URLIPRange) fetch(api string) ([]netip.Prefix, error) {
 
 func (s *URLIPRange) getPrefixes() ([]netip.Prefix, error) {
 	var fullPrefixes []netip.Prefix
-	// fetch ipv4 list
+
+	// Fetch ipv4 list
 	prefixes, err := s.fetch(s.URL)
 	if err != nil {
 		return nil, err
@@ -139,6 +156,7 @@ func (s *URLIPRange) GetIPRanges(_ *http.Request) []netip.Prefix {
 //	url {
 //	   interval val
 //	   timeout val
+//	   url string
 //	}
 func (m *URLIPRange) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 	d.Next() // Skip module name.
@@ -181,7 +199,7 @@ func (m *URLIPRange) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 	return nil
 }
 
-// interface guards
+// Interface guards
 var (
 	_ caddy.Module            = (*URLIPRange)(nil)
 	_ caddy.Provisioner       = (*URLIPRange)(nil)
