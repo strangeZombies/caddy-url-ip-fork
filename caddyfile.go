@@ -1,6 +1,7 @@
 package caddy_url_ip
 
 import (
+	"strings"
 	"bufio"
 	"context"
 	"net/http"
