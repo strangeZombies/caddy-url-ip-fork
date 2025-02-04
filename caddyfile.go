@@ -1,4 +1,4 @@
-package caddy_cloudflare_ip
+package caddy_url_ip
 
 import (
 	"bufio"
@@ -15,18 +15,17 @@ import (
 
 
 func init() {
-	caddy.RegisterModule(CloudflareIPRange{})
+	caddy.RegisterModule(URLIPRange{})
 }
 
-// CloudflareIPRange provides a range of IP address prefixes (CIDRs) retrieved from cloudflare.
-type CloudflareIPRange struct {
+// URLIPRange provides a range of IP address prefixes (CIDRs) retrieved from url.
+type URLIPRange struct {
+    // List of URLs to fetch the IP ranges from.
+    URL string `json:"url"`
 	// refresh Interval
 	Interval caddy.Duration `json:"interval,omitempty"`
 	// request Timeout
 	Timeout caddy.Duration `json:"timeout,omitempty"`
-    
-    // List of URLs to fetch the IP ranges from.
-    URL string `json:"url,omitempty"`
 
 	// Holds the parsed CIDR ranges from Ranges.
 	ranges []netip.Prefix
@@ -36,22 +35,22 @@ type CloudflareIPRange struct {
 }
 
 // CaddyModule returns the Caddy module information.
-func (CloudflareIPRange) CaddyModule() caddy.ModuleInfo {
+func (URLIPRange) CaddyModule() caddy.ModuleInfo {
 	return caddy.ModuleInfo{
-		ID:  "http.ip_sources.cloudflare",
-		New: func() caddy.Module { return new(CloudflareIPRange) },
+		ID:  "http.ip_sources.url",
+		New: func() caddy.Module { return new(URLIPRange) },
 	}
 }
 
 // getContext returns a cancelable context, with a timeout if configured.
-func (s *CloudflareIPRange) getContext() (context.Context, context.CancelFunc) {
+func (s *URLIPRange) getContext() (context.Context, context.CancelFunc) {
 	if s.Timeout > 0 {
 		return context.WithTimeout(s.ctx, time.Duration(s.Timeout))
 	}
 	return context.WithCancel(s.ctx)
 }
 
-func (s *CloudflareIPRange) fetch(api string) ([]netip.Prefix, error) {
+func (s *URLIPRange) fetch(api string) ([]netip.Prefix, error) {
 	ctx, cancel := s.getContext()
 	defer cancel()
 
@@ -78,7 +77,7 @@ func (s *CloudflareIPRange) fetch(api string) ([]netip.Prefix, error) {
 	return prefixes, nil
 }
 
-func (s *CloudflareIPRange) getPrefixes() ([]netip.Prefix, error) {
+func (s *URLIPRange) getPrefixes() ([]netip.Prefix, error) {
 	var fullPrefixes []netip.Prefix
 	// fetch ipv4 list
 	prefixes, err := s.fetch(s.URL)
@@ -91,7 +90,7 @@ func (s *CloudflareIPRange) getPrefixes() ([]netip.Prefix, error) {
 	return fullPrefixes, nil
 }
 
-func (s *CloudflareIPRange) Provision(ctx caddy.Context) error {
+func (s *URLIPRange) Provision(ctx caddy.Context) error {
 	s.ctx = ctx
 	s.lock = new(sync.RWMutex)
 
@@ -100,7 +99,7 @@ func (s *CloudflareIPRange) Provision(ctx caddy.Context) error {
 	return nil
 }
 
-func (s *CloudflareIPRange) refreshLoop() {
+func (s *URLIPRange) refreshLoop() {
 	if s.Interval == 0 {
 		s.Interval = caddy.Duration(time.Hour)
 	}
@@ -129,7 +128,7 @@ func (s *CloudflareIPRange) refreshLoop() {
 	}
 }
 
-func (s *CloudflareIPRange) GetIPRanges(_ *http.Request) []netip.Prefix {
+func (s *URLIPRange) GetIPRanges(_ *http.Request) []netip.Prefix {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
 	return s.ranges
@@ -137,11 +136,11 @@ func (s *CloudflareIPRange) GetIPRanges(_ *http.Request) []netip.Prefix {
 
 // UnmarshalCaddyfile implements caddyfile.Unmarshaler.
 //
-//	cloudflare {
+//	url {
 //	   interval val
 //	   timeout val
 //	}
-func (m *CloudflareIPRange) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
+func (m *URLIPRange) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 	d.Next() // Skip module name.
 
 	// No same-line options are supported
@@ -184,8 +183,8 @@ func (m *CloudflareIPRange) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 
 // interface guards
 var (
-	_ caddy.Module            = (*CloudflareIPRange)(nil)
-	_ caddy.Provisioner       = (*CloudflareIPRange)(nil)
-	_ caddyfile.Unmarshaler   = (*CloudflareIPRange)(nil)
-	_ caddyhttp.IPRangeSource = (*CloudflareIPRange)(nil)
+	_ caddy.Module            = (*URLIPRange)(nil)
+	_ caddy.Provisioner       = (*URLIPRange)(nil)
+	_ caddyfile.Unmarshaler   = (*URLIPRange)(nil)
+	_ caddyhttp.IPRangeSource = (*URLIPRange)(nil)
 )
