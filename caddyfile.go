@@ -22,7 +22,7 @@ func init() {
 // URLIPRange provides a range of IP address prefixes (CIDRs) retrieved from url.
 type URLIPRange struct {
     // List of URLs to fetch the IP ranges from.
-    URL string `json:"url"`
+    URLs []string `json:"url"`
 	// refresh Interval
 	Interval caddy.Duration `json:"interval,omitempty"`
 	// request Timeout
@@ -96,14 +96,14 @@ func (s *URLIPRange) fetch(api string) ([]netip.Prefix, error) {
 
 func (s *URLIPRange) getPrefixes() ([]netip.Prefix, error) {
 	var fullPrefixes []netip.Prefix
-
-	// Fetch ipv4 list
-	prefixes, err := s.fetch(s.URL)
-	if err != nil {
-		return nil, err
-	}
-	fullPrefixes = append(fullPrefixes, prefixes...)
-
+    for _, url := range s.URLs {
+	    // Fetch list
+	    prefixes, err := s.fetch(url)
+	    if err != nil {
+		    return nil, err
+	    }
+	    fullPrefixes = append(fullPrefixes, prefixes...)
+    }
 
 	return fullPrefixes, nil
 }
@@ -191,7 +191,7 @@ func (m *URLIPRange) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
             if !d.NextArg() {
                 return d.ArgErr()
             }
-            m.URL = d.Val()
+            m.URLs = append(m.URLs, d.Val())
 		default:
 			return d.ArgErr()
 		}
