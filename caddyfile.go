@@ -13,10 +13,6 @@ import (
 	"github.com/caddyserver/caddy/v2/modules/caddyhttp"
 )
 
-const (
-	ipv4 = "https://www.cloudflare.com/ips-v4"
-	ipv6 = "https://www.cloudflare.com/ips-v6"
-)
 
 func init() {
 	caddy.RegisterModule(CloudflareIPRange{})
@@ -28,6 +24,9 @@ type CloudflareIPRange struct {
 	Interval caddy.Duration `json:"interval,omitempty"`
 	// request Timeout
 	Timeout caddy.Duration `json:"timeout,omitempty"`
+    
+    // List of URLs to fetch the IP ranges from.
+    URL string `json:"url,omitempty"`
 
 	// Holds the parsed CIDR ranges from Ranges.
 	ranges []netip.Prefix
@@ -82,18 +81,12 @@ func (s *CloudflareIPRange) fetch(api string) ([]netip.Prefix, error) {
 func (s *CloudflareIPRange) getPrefixes() ([]netip.Prefix, error) {
 	var fullPrefixes []netip.Prefix
 	// fetch ipv4 list
-	prefixes, err := s.fetch(ipv4)
+	prefixes, err := s.fetch(s.URL)
 	if err != nil {
 		return nil, err
 	}
 	fullPrefixes = append(fullPrefixes, prefixes...)
 
-	// fetch ipv6 list
-	prefixes, err = s.fetch(ipv6)
-	if err != nil {
-		return nil, err
-	}
-	fullPrefixes = append(fullPrefixes, prefixes...)
 
 	return fullPrefixes, nil
 }
@@ -176,6 +169,11 @@ func (m *CloudflareIPRange) UnmarshalCaddyfile(d *caddyfile.Dispenser) error {
 				return err
 			}
 			m.Timeout = caddy.Duration(val)
+        case "url":
+            if !d.NextArg() {
+                return d.ArgErr()
+            }
+            m.URL = d.Val()
 		default:
 			return d.ArgErr()
 		}
