@@ -11,6 +11,7 @@ Place the following configuration in the global options under the corresponding 
 ```caddy
 trusted_proxies url {
     url https://www.cloudflare.com/ips-v4  # specify the URL to fetch the IP list
+    url https://www.cloudflare.com/ips-v6  # You can use multiple URLs
     interval 12h
     timeout 15s
 }
@@ -20,6 +21,6 @@ trusted_proxies url {
 
 | Name     | Description                                             | Type     | Default    |
 |----------|---------------------------------------------------------|----------|------------|
-| url      | URL to retrieve the IP list                             | string   | *required* |
+| url      | URL(s) to retrieve the IP list                          | string   | *required* |
 | interval | Frequency at which the IP list is retrieved             | duration | 1h         |
 | timeout  | Maximum time to wait for a response from URL            | duration | no timeout |
