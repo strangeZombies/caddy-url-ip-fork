@@ -1,4 +1,4 @@
-module github.com/kreatoo/caddy-url-ip
+module github.com/monobilisim/caddy-url-ip
 
 go 1.20
 
